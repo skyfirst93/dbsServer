@@ -1,12 +1,12 @@
 package processes
 
 import (
+	"bytes"
 	"dbssever/models"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strings"
 )
 
 var answersKey = "ANSWER_KEY_"
@@ -86,11 +86,14 @@ func GenerateOtp(w http.ResponseWriter, r *http.Request) {
 func generateOtp(email string) {
 	url := "https://erabhinav.pythonanywhere.com/send-otp"
 	method := "POST"
-
-	payload := strings.NewReader(`{"email": ` + email + `}`)
+	var emailSend models.Email
+	emailSend.Email = email
+	req1, _ := json.Marshal(emailSend)
+	jsonStr := []byte(req1)
+	//payload := strings.NewReader(req1)
 
 	client := &http.Client{}
-	req, err := http.NewRequest(method, url, payload)
+	req, err := http.NewRequest(method, url, bytes.NewBuffer(jsonStr))
 
 	if err != nil {
 		fmt.Println(err)
