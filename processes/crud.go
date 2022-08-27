@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 )
 
 var answersKey = "ANSWER_KEY_"
@@ -16,14 +17,18 @@ var optMap = make(map[string]bool)
 
 func AuthenticateUser(w http.ResponseWriter, r *http.Request) {
 	var authenticate models.Authenticate
-	reqBody, err := ioutil.ReadAll(r.Body)
+	err := r.ParseMultipartForm(0)
+
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Kindly enter data correctly")
+		w.Write([]byte(err.Error()))
 		return
 	}
 
-	json.Unmarshal(reqBody, &authenticate)
+	authenticate.EmailAddress = r.FormValue("emailAddress")
+	authenticate.Password = r.FormValue("password")
+	authenticate.PhoneNumber = r.FormValue("phoneNumber")
+	authenticate.Username = r.FormValue("username")
+
 	fmt.Println("data ", authenticate)
 	var associate models.Associate
 	associate.RequestID = "88ydEE-ioiwe=="
@@ -36,12 +41,17 @@ func AuthenticateUser(w http.ResponseWriter, r *http.Request) {
 
 func AssociateUser(w http.ResponseWriter, r *http.Request) {
 	var associate models.Associate
-	reqBody, err := ioutil.ReadAll(r.Body)
+	err := r.ParseMultipartForm(0)
+
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Kindly enter data correctly")
+		w.Write([]byte(err.Error()))
+		return
 	}
-	json.Unmarshal(reqBody, &associate)
+
+	associate.AssociationID = r.FormValue("associationId")
+	associate.RequestID = r.FormValue("requestId")
+	associate.GooglePaymentToken = r.FormValue("googlePaymentToken")
+
 	fmt.Println("data ", associate)
 	_, ok := userMap[associate.AssociationID]
 	if ok {
@@ -61,12 +71,25 @@ func AssociateUser(w http.ResponseWriter, r *http.Request) {
 
 func GenerateOtp(w http.ResponseWriter, r *http.Request) {
 	var otpDetails models.OtpDetails
-	reqBody, err := ioutil.ReadAll(r.Body)
+	var associate models.Associate
+	var authenticate models.Authenticate
+	err := r.ParseMultipartForm(0)
+
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Kindly enter data correctly")
+		w.Write([]byte(err.Error()))
+		return
 	}
-	json.Unmarshal(reqBody, &otpDetails)
+	authenticate.EmailAddress = r.FormValue("emailAddress")
+	authenticate.Password = r.FormValue("password")
+	authenticate.PhoneNumber = r.FormValue("phoneNumber")
+	authenticate.Username = r.FormValue("username")
+	associate.AssociationID = r.FormValue("associationId")
+	associate.RequestID = r.FormValue("requestId")
+	associate.GooglePaymentToken = r.FormValue("googlePaymentToken")
+	otpDetails.Associate = associate
+	otpDetails.Authenticate = authenticate
+	otpDetails.Amount, _ = strconv.ParseInt(r.FormValue("amount"), 10, 64)
+	otpDetails.DigitalServiceId = r.FormValue("digitalServiceId")
 	fmt.Println("data ", otpDetails)
 	_, ok := userMap[otpDetails.AssociationID]
 	if ok {
@@ -121,12 +144,13 @@ func generateOtp(email string) {
 
 func VerifyOtp(w http.ResponseWriter, r *http.Request) {
 	var otp models.Otp
-	reqBody, err := ioutil.ReadAll(r.Body)
+	err := r.ParseMultipartForm(0)
+
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Kindly enter data correctly")
+		w.Write([]byte(err.Error()))
+		return
 	}
-	json.Unmarshal(reqBody, &otp)
+	otp.Otp = r.FormValue("otp")
 	fmt.Println("data ", otp)
 	_, ok := optMap[otp.Otp]
 	if ok {
